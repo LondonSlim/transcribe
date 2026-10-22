@@ -1,0 +1,629 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Transcribe">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#eef4f9" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0d1524" media="(prefers-color-scheme: dark)">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="favicon.png">
+<link rel="manifest" href="manifest.json">
+<style>*,*::before,*::after{box-sizing:border-box}body{margin:0}[hidden]{display:none!important}</style>
+<title>Transcribe</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: one fixed screen sized to the visible viewport (keyboard-aware): header, toolbar, full-height transcript. */
+:root{
+  --bg:#eef4f9; --surface:#ffffff; --ink:#14233f; --muted:#5b6b82; --line:#d3dde8;
+  --navy:#1b2f57; --on-navy:#ffffff; --pale:#d6e7f4;
+  --ok:#2e7d4f; --wait:#9a5b00; --err:#b3261e;
+  --ui:"Gill Sans","Gill Sans MT","Gill Sans Nova",Seravek,"Trebuchet MS",system-ui,sans-serif;
+  --text:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0d1524; --surface:#152038; --ink:#e6edf7; --muted:#9aabc4; --line:#27395b;
+  --navy:#a9cbec; --on-navy:#0d1524; --pale:#1e3253; --ok:#6fcf97; --wait:#f2b25c; --err:#f2857c; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0d1524; --surface:#152038; --ink:#e6edf7; --muted:#9aabc4; --line:#27395b;
+  --navy:#a9cbec; --on-navy:#0d1524; --pale:#1e3253; --ok:#6fcf97; --wait:#f2b25c; --err:#f2857c; color-scheme:dark}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--ui);font-size:16px;overflow:hidden;-webkit-text-size-adjust:100%}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer;-webkit-tap-highlight-color:transparent}
+:focus-visible{outline:2px solid var(--navy);outline-offset:2px}
+
+.app{position:fixed;left:0;right:0;top:var(--vvtop,0px);height:var(--vvh,100%);display:flex;flex-direction:column;
+  padding-top:env(safe-area-inset-top,0px);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header{display:flex;align-items:center;gap:10px;padding-block:10px 6px}
+.mark{width:30px;height:30px;border-radius:8px;flex:none;background:var(--pale);display:grid;place-items:center;overflow:hidden;position:relative}
+.mark::before{content:"";position:absolute;inset:auto -4px 0 -4px;height:45%;background:repeating-radial-gradient(circle at 50% -60%,transparent 0 9px,color-mix(in srgb,var(--navy) 14%,transparent) 9px 11px)}
+.mark b{font:700 21px/1 var(--ui);color:var(--navy);position:relative}
+h1{font:600 21px/1 var(--ui);letter-spacing:.01em;margin:0;flex:1}
+.icon-btn{border:0;background:none;width:40px;height:40px;border-radius:10px;display:grid;place-items:center;color:var(--muted)}
+.icon-btn:active{background:var(--pale)}
+.icon-btn svg{width:22px;height:22px}
+.pill{border:0;border-radius:99px;padding:4px 10px;font-size:13px;background:color-mix(in srgb,var(--wait) 16%,transparent);color:var(--wait)}
+
+.toolbar{display:flex;gap:8px;align-items:center;padding-block:4px 10px}
+.job{flex:1;min-width:0;display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:9px 12px;text-align:left}
+.job span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.job small{color:var(--muted);font-size:12px;letter-spacing:.06em;text-transform:uppercase;flex:none}
+.job.empty span{color:var(--muted)}
+.tbtn{border:1px solid var(--line);background:var(--surface);border-radius:12px;height:42px;min-width:42px;padding:0 12px;display:grid;place-items:center;font-size:15px}
+.tbtn:active{background:var(--pale)}
+.primary{background:var(--navy);border-color:var(--navy);color:var(--on-navy);font-weight:600}
+.primary:active{filter:brightness(1.1);background:var(--navy)}
+.primary[disabled]{opacity:.45}
+
+.paper{flex:1;min-height:0;display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+textarea#text{flex:1;min-height:0;width:100%;border:0;outline:0;resize:none;background:transparent;padding:16px 16px 40px;
+  font:18px/1.55 var(--text);color:var(--ink)}
+textarea#text::placeholder{color:var(--muted);font-family:var(--ui);font-size:16px;line-height:1.5}
+.status{display:flex;justify-content:space-between;gap:10px;padding:7px 14px;border-top:1px solid var(--line);font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.foot{height:calc(10px + env(safe-area-inset-bottom,0px))}
+
+/* sheets */
+.scrim{position:fixed;inset:0;background:rgba(8,14,26,.45);z-index:20}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:21;max-height:88%;display:flex;flex-direction:column;background:var(--surface);
+  border-radius:18px 18px 0 0;box-shadow:0 -8px 30px rgba(0,0,0,.18);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+.sheet-head{display:flex;align-items:center;gap:8px;padding-block:14px 8px}
+.sheet-head h2{flex:1;margin:0;font:600 19px/1.2 var(--ui)}
+.sheet-body{overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:16px;padding-bottom:6px}
+.group{display:flex;flex-direction:column;gap:8px}
+.label{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.field{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 12px;font-size:16px}
+.row{display:flex;gap:8px;align-items:center}
+.row > .field{flex:1;min-width:0}
+.hint{font-size:14px;color:var(--muted);line-height:1.45;margin:0}
+.hint code,.mono{font-family:ui-monospace,Menlo,monospace;font-size:13px;word-break:break-all}
+.check{display:flex;gap:10px;align-items:flex-start;font-size:16px}
+.check input{width:22px;height:22px;margin:0;accent-color:var(--navy);flex:none}
+.list{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.item{display:flex;flex-direction:column;gap:3px;text-align:left;border:0;border-bottom:1px solid var(--line);background:none;padding:11px 12px}
+.item:last-child{border-bottom:0}
+.item:active,.item.sel{background:var(--pale)}
+.item .t{font-size:16px}
+.item .s{font-size:13px;color:var(--muted)}
+.summary{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:15px;margin:0}
+.summary dt{color:var(--muted)}
+.summary dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font-size:12px;border-radius:99px;padding:3px 9px;background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+.chip.ok{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 40%,transparent)}
+.chip.wait{color:var(--wait);border-color:color-mix(in srgb,var(--wait) 40%,transparent)}
+.chip.err{color:var(--err);border-color:color-mix(in srgb,var(--err) 40%,transparent)}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:9px 14px;font-size:15px}
+.btn.primary{background:var(--navy);border-color:var(--navy);color:var(--on-navy);font-weight:600}
+.sub{font-size:14px;color:var(--muted);margin-bottom:-4px}
+.btn.wide{width:100%;padding:13px;font-size:17px}
+.danger{color:var(--err)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom,0px));z-index:30;max-width:calc(100% - 32px);
+  background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:15px;box-shadow:0 6px 20px rgba(0,0,0,.25)}
+@media (prefers-reduced-motion:no-preference){.sheet{animation:up .18s ease-out}@keyframes up{from{transform:translateY(30px);opacity:.6}}}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header>
+    <div class="mark" aria-hidden="true"><b>T</b></div>
+    <h1>Transcribe</h1>
+    <button class="pill" id="pendingPill" hidden></button>
+    <button class="icon-btn" id="historyBtn" aria-label="Sent transcriptions">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v4h4"/><path d="M12 7v5l3 2"/></svg>
+    </button>
+    <button class="icon-btn" id="settingsBtn" aria-label="Settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+    </button>
+  </header>
+
+  <div class="toolbar">
+    <button class="job empty" id="jobBtn"><span id="jobLabel">Choose vessel</span><small id="jobTag"></small></button>
+    <button class="tbtn" id="paraBtn" aria-label="New paragraph" title="New paragraph">¶</button>
+    <button class="tbtn" id="copyBtn">Copy</button>
+    <button class="tbtn primary" id="sendBtn">Send</button>
+  </div>
+
+  <div class="paper">
+    <textarea id="text" spellcheck="true" autocapitalize="sentences"
+      placeholder="Tap here, switch to the OpenWhispr keyboard and dictate. Each dictation starts a new paragraph automatically."></textarea>
+    <div class="status"><span id="count">0 words</span><span id="saved"></span></div>
+  </div>
+  <div class="foot"></div>
+</div>
+
+<!-- Job sheet -->
+<div class="scrim" id="scrim" hidden></div>
+<section class="sheet" id="jobSheet" hidden aria-label="Choose vessel">
+  <div class="sheet-head"><h2>Vessel</h2><button class="btn" data-close>Done</button></div>
+  <div class="sheet-body">
+    <div class="group" id="odJobs" hidden>
+      <span class="label">Job folders on OneDrive</span>
+      <input class="field" id="folderFilter" type="search" placeholder="Search job folders" autocomplete="off">
+      <div class="list" id="folderList"></div>
+      <p class="hint" id="folderMsg"></p>
+    </div>
+    <div class="group">
+      <span class="label" id="manualLabel">Vessel name</span>
+      <input class="field" id="vesselInput" type="text" placeholder="e.g. Kingfisher" autocomplete="off" autocapitalize="words">
+      <p class="hint" id="manualHint">Used for the email subject, “[Vessel] Transcript”.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Send sheet -->
+<section class="sheet" id="sendSheet" hidden aria-label="Send transcription">
+  <div class="sheet-head"><h2>Send transcription</h2><button class="btn" data-close>Cancel</button></div>
+  <div class="sheet-body">
+    <dl class="summary" id="sendSummary"></dl>
+    <p class="hint" id="sendNote"></p>
+    <button class="btn primary wide" id="confirmSend">Send</button>
+  </div>
+</section>
+
+<!-- History sheet -->
+<section class="sheet" id="historySheet" hidden aria-label="Sent transcriptions">
+  <div class="sheet-head"><h2>Sent</h2><button class="btn" id="retryAll" hidden>Retry all</button><button class="btn" data-close>Done</button></div>
+  <div class="sheet-body" id="historyBody"></div>
+</section>
+
+<!-- Settings sheet -->
+<section class="sheet" id="settingsSheet" hidden aria-label="Settings">
+  <div class="sheet-head"><h2>Settings</h2><button class="btn" data-close>Done</button></div>
+  <div class="sheet-body">
+    <div class="group">
+      <span class="label">Dictation</span>
+      <label class="check"><input type="checkbox" id="setAuto"> <span>Start each dictation on a new paragraph</span></label>
+      <p class="hint">Text arriving in one go from the keyboard at the end of the note gets two line breaks in front. Ordinary typing and dictating into the middle of the text are left alone. The ¶ button adds a break by hand.</p>
+    </div>
+
+    <div class="group">
+      <span class="label">Email</span>
+      <label class="sub" for="setEmail">Send to</label>
+      <input class="field" id="setEmail" type="email" autocomplete="off" autocapitalize="off">
+      <label class="sub" for="setScript">Automatic email script address (optional)</label>
+      <input class="field mono" id="setScript" type="url" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off" autocapitalize="off">
+      <label class="sub" for="setKey">Script key</label>
+      <input class="field" id="setKey" type="text" autocomplete="off" autocapitalize="off">
+      <p class="hint" id="emailHint"></p>
+    </div>
+
+    <div class="group">
+      <span class="label">OneDrive</span>
+      <label class="sub" for="setClient">Microsoft application (client) ID</label>
+      <input class="field mono" id="setClient" type="text" placeholder="00000000-0000-0000-0000-000000000000" autocomplete="off" autocapitalize="off">
+      <label class="sub" for="setPath">Jobs folder on OneDrive</label>
+      <input class="field" id="setPath" type="text" autocomplete="off" autocapitalize="off">
+      <div class="actions"><button class="btn primary" id="msSignIn">Sign in to Microsoft</button><button class="btn" id="msSignOut" hidden>Sign out</button></div>
+      <p class="hint" id="msState"></p>
+      <p class="hint">Redirect address to register with Microsoft:<br><span class="mono" id="redirectShow"></span></p>
+    </div>
+
+    <div class="group">
+      <span class="label">This note</span>
+      <div class="actions"><button class="btn danger" id="clearBtn">Clear text</button></div>
+    </div>
+  </div>
+</section>
+
+<div class="toast" id="toast" hidden role="status"></div>
+
+<script>
+(() => {
+'use strict';
+const $ = s => document.querySelector(s);
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem('tx.'+k); return v == null ? d : JSON.parse(v); }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem('tx.'+k, JSON.stringify(v)); }catch(e){} },
+  del(k){ try{ localStorage.removeItem('tx.'+k); }catch(e){} }
+};
+const DEFAULTS = { emailTo:'hugh@isis-marine.co.uk', scriptUrl:'', scriptKey:'', clientId:'', jobsPath:'Boat Surveyor/Jobs', autoBreaks:true };
+let settings = Object.assign({}, DEFAULTS, store.get('settings', {}));
+let job = store.get('job', null);          // {vessel, folder}
+let outbox = store.get('outbox', []);      // sent / pending items
+const MIN_CHARS = 12;                      // smallest chunk treated as a dictation
+const AUTH = 'https://login.microsoftonline.com/consumers/oauth2/v2.0';
+const GRAPH = 'https://graph.microsoft.com/v1.0';
+const SCOPES = 'Files.ReadWrite offline_access';
+
+/* ---------- keyboard-aware sizing ---------- */
+const vv = window.visualViewport;
+function fit(){
+  const r = document.documentElement.style;
+  if (vv){ r.setProperty('--vvh', vv.height + 'px'); r.setProperty('--vvtop', vv.offsetTop + 'px'); }
+}
+if (vv){ vv.addEventListener('resize', fit); vv.addEventListener('scroll', fit); }
+fit();
+
+/* ---------- toast ---------- */
+let toastT;
+function toast(msg, ms = 2600){
+  const t = $('#toast'); t.textContent = msg; t.hidden = false;
+  clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, ms);
+}
+
+/* ---------- editor ---------- */
+const ta = $('#text');
+ta.value = store.get('draft', '');
+let last = ta.value;
+let savedT;
+
+function counts(){
+  const v = ta.value.trim();
+  const words = v ? v.split(/\s+/).length : 0;
+  const paras = v ? v.split(/\n\s*\n/).filter(p => p.trim()).length : 0;
+  $('#count').textContent = `${words} word${words === 1 ? '' : 's'}` + (paras > 1 ? ` · ${paras} items` : '');
+  $('#sendBtn').disabled = !v;
+}
+function saveDraft(){
+  store.set('draft', ta.value); counts();
+  $('#saved').textContent = ta.value ? 'Saved on this phone' : '';
+}
+
+// Detect text that arrived in one go (a dictation) and start it on a new paragraph.
+function applyBreaks(){
+  const cur = ta.value, old = last;
+  if (cur.length <= old.length) return false;
+  const max = Math.min(cur.length, old.length);
+  let p = 0; while (p < max && cur[p] === old[p]) p++;
+  let s = 0; while (s < max - p && cur[cur.length - 1 - s] === old[old.length - 1 - s]) s++;
+  const removed = old.slice(p, old.length - s);
+  const inserted = cur.slice(p, cur.length - s);
+  const before = cur.slice(0, p), after = cur.slice(cur.length - s);
+  if (removed.trim() !== '') return false;           // a replacement (autocorrect etc.)
+  const body = inserted.trim();
+  if (body.length < MIN_CHARS || !/\s/.test(body)) return false; // ordinary typing
+  if (after.trim() !== '') return false;             // dictating into the middle: leave alone
+  const head = before.trim() === '' ? '' : before.replace(/\s+$/, '') + '\n\n';
+  const next = head + body;
+  if (next === cur) return false;
+  ta.value = next;
+  ta.setSelectionRange(next.length, next.length);
+  return true;
+}
+ta.addEventListener('input', e => {
+  if (settings.autoBreaks && !e.isComposing) applyBreaks();
+  last = ta.value; saveDraft();
+});
+ta.addEventListener('compositionend', () => { if (settings.autoBreaks) applyBreaks(); last = ta.value; saveDraft(); });
+
+function setText(v){ ta.value = v; last = v; saveDraft(); }
+
+$('#paraBtn').addEventListener('click', () => {
+  const v = ta.value.replace(/\s+$/, '');
+  setText(v ? v + '\n\n' : '');
+  ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length);
+});
+
+async function copyText(text){
+  try { await navigator.clipboard.writeText(text); toast('Copied'); }
+  catch(e){ ta.focus(); ta.select(); toast('Select-all done. Tap Copy in the menu.'); }
+}
+$('#copyBtn').addEventListener('click', () => { if (ta.value.trim()) copyText(ta.value.trim()); });
+
+let clearArmed = false;
+$('#clearBtn').addEventListener('click', e => {
+  if (!ta.value) { toast('Nothing to clear'); return; }
+  if (!clearArmed){ clearArmed = true; e.target.textContent = 'Tap again to clear'; setTimeout(() => { clearArmed = false; e.target.textContent = 'Clear text'; }, 3000); return; }
+  clearArmed = false; e.target.textContent = 'Clear text'; setText(''); closeSheets(); toast('Cleared');
+});
+
+/* ---------- sheets ---------- */
+function openSheet(id){
+  closeSheets(true);
+  ta.blur();
+  $('#scrim').hidden = false; $(id).hidden = false;
+}
+function closeSheets(quiet){
+  document.querySelectorAll('.sheet').forEach(s => s.hidden = true);
+  $('#scrim').hidden = true;
+  if (!quiet) renderJob();
+}
+$('#scrim').addEventListener('click', () => closeSheets());
+document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => closeSheets()));
+
+/* ---------- dates & names ---------- */
+const pad = n => String(n).padStart(2, '0');
+const ymd = d => `${d.getFullYear()}.${pad(d.getMonth()+1)}.${pad(d.getDate())}`;
+const hm = d => `${pad(d.getHours())}${pad(d.getMinutes())}`;
+function parseFolder(name){
+  const m = name.match(/^(.*?)\s+(\d{4})\.(\d{2})\.(\d{2})$/);
+  return m ? { vessel: m[1].trim(), date: `${m[2]}.${m[3]}.${m[4]}` } : { vessel: name, date: '' };
+}
+function safeName(s){ return s.replace(/[\\/:*?"<>|#%]/g, '-').trim(); }
+
+/* ---------- job ---------- */
+function renderJob(){
+  const b = $('#jobBtn');
+  if (job && job.vessel){
+    b.classList.remove('empty');
+    $('#jobLabel').textContent = job.vessel;
+    $('#jobTag').textContent = job.folder ? (parseFolder(job.folder).date || 'Folder') : 'Email only';
+  } else {
+    b.classList.add('empty'); $('#jobLabel').textContent = 'Choose vessel'; $('#jobTag').textContent = '';
+  }
+}
+function setJob(j){ job = j; store.set('job', j); renderJob(); }
+
+let folders = null;
+$('#jobBtn').addEventListener('click', async () => {
+  $('#vesselInput').value = job && !job.folder ? job.vessel : '';
+  openSheet('#jobSheet');
+  const od = onedriveReady();
+  $('#odJobs').hidden = !od;
+  $('#manualLabel').textContent = od ? 'Or type a vessel name (email only)' : 'Vessel name';
+  if (od) await loadFolders();
+});
+$('#vesselInput').addEventListener('input', e => {
+  const v = e.target.value.trim();
+  setJob(v ? { vessel: v, folder: null } : null);
+  renderFolders();
+});
+$('#vesselInput').addEventListener('keydown', e => { if (e.key === 'Enter') closeSheets(); });
+$('#folderFilter').addEventListener('input', renderFolders);
+
+async function loadFolders(){
+  const msg = $('#folderMsg');
+  msg.textContent = 'Loading job folders…';
+  try {
+    const tok = await getToken();
+    if (!tok){ msg.textContent = 'Sign in to Microsoft in Settings to see your job folders.'; return; }
+    let url = `${GRAPH}/me/drive/root:/${encPath(settings.jobsPath)}:/children?$select=name,folder,lastModifiedDateTime&$top=500`;
+    const all = [];
+    while (url){
+      const r = await fetch(url, { headers: { Authorization: 'Bearer ' + tok } });
+      if (r.status === 404) throw new Error(`Folder “${settings.jobsPath}” not found on OneDrive.`);
+      if (!r.ok) throw new Error('OneDrive said ' + r.status);
+      const j = await r.json(); all.push(...j.value); url = j['@odata.nextLink'];
+    }
+    folders = all.filter(f => f.folder).map(f => ({ name: f.name, mod: f.lastModifiedDateTime }));
+    folders.sort((a, b) => {
+      const da = parseFolder(a.name).date, db = parseFolder(b.name).date;
+      if (da && db && da !== db) return db.localeCompare(da);
+      return (b.mod || '').localeCompare(a.mod || '');
+    });
+    store.set('folders', folders);
+    msg.textContent = '';
+  } catch(e){
+    folders = store.get('folders', null);
+    msg.textContent = (navigator.onLine ? e.message : 'No signal.') + (folders ? ' Showing the last list.' : '');
+  }
+  renderFolders();
+}
+function renderFolders(){
+  const list = $('#folderList'); list.textContent = '';
+  if (!folders){ list.hidden = true; return; }
+  const q = $('#folderFilter').value.trim().toLowerCase();
+  const shown = folders.filter(f => !q || f.name.toLowerCase().includes(q)).slice(0, q ? 60 : 25);
+  list.hidden = !shown.length;
+  for (const f of shown){
+    const p = parseFolder(f.name);
+    const b = document.createElement('button');
+    b.className = 'item' + (job && job.folder === f.name ? ' sel' : '');
+    b.innerHTML = '<span class="t"></span><span class="s"></span>';
+    b.querySelector('.t').textContent = p.vessel;
+    b.querySelector('.s').textContent = p.date || f.name;
+    b.addEventListener('click', () => { setJob({ vessel: p.vessel, folder: f.name }); $('#vesselInput').value = ''; closeSheets(); });
+    list.appendChild(b);
+  }
+}
+
+/* ---------- Microsoft sign-in (PKCE, no password ever touches this app) ---------- */
+const redirectUri = () => location.origin + location.pathname;
+const b64url = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+const randStr = n => b64url(crypto.getRandomValues(new Uint8Array(n)));
+const encPath = p => p.split('/').filter(Boolean).map(encodeURIComponent).join('/');
+const onedriveReady = () => !!(settings.clientId && store.get('ms', null));
+
+async function signIn(){
+  if (!settings.clientId){ toast('Enter the Microsoft client ID first'); return; }
+  const verifier = randStr(48), state = randStr(16);
+  const challenge = b64url(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier)));
+  store.set('pkce', { verifier, state });
+  const q = new URLSearchParams({ client_id: settings.clientId, response_type: 'code', redirect_uri: redirectUri(),
+    response_mode: 'query', scope: SCOPES, state, code_challenge: challenge, code_challenge_method: 'S256' });
+  location.href = `${AUTH}/authorize?${q}`;
+}
+async function tokenRequest(params){
+  const r = await fetch(`${AUTH}/token`, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams(Object.assign({ client_id: settings.clientId, scope: SCOPES, redirect_uri: redirectUri() }, params)) });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok || !j.access_token) throw new Error(j.error_description ? j.error_description.split('\r')[0] : 'Sign-in failed');
+  const ms = { access: j.access_token, refresh: j.refresh_token, exp: Date.now() + (j.expires_in - 120) * 1000 };
+  store.set('ms', ms); return ms;
+}
+async function handleRedirect(){
+  const q = new URLSearchParams(location.search);
+  if (!q.has('code') && !q.has('error')) return;
+  history.replaceState(null, '', location.pathname);
+  const st = store.get('pkce', null); store.del('pkce');
+  if (q.has('error')){ toast('Microsoft sign-in: ' + (q.get('error_description') || q.get('error')), 5000); return; }
+  if (!st || st.state !== q.get('state')){ toast('Sign-in could not be confirmed. Please try again.', 4000); return; }
+  try { await tokenRequest({ grant_type: 'authorization_code', code: q.get('code'), code_verifier: st.verifier }); toast('Signed in to OneDrive'); await whoAmI(); }
+  catch(e){ toast(e.message, 5000); }
+}
+async function getToken(){
+  const ms = store.get('ms', null);
+  if (!ms || !settings.clientId) return null;
+  if (ms.exp > Date.now()) return ms.access;
+  if (!ms.refresh) return null;
+  try { return (await tokenRequest({ grant_type: 'refresh_token', refresh_token: ms.refresh })).access; }
+  catch(e){ if (!navigator.onLine) throw new Error('No signal'); store.set('ms', Object.assign(ms, { refresh: null })); return null; }
+}
+async function whoAmI(){
+  try {
+    const tok = await getToken(); if (!tok) return;
+    const r = await fetch(`${GRAPH}/me/drive?$select=owner`, { headers: { Authorization: 'Bearer ' + tok } });
+    if (r.ok){ const j = await r.json(); store.set('msName', (j.owner && j.owner.user && j.owner.user.displayName) || 'your account'); }
+  } catch(e){}
+  renderSettings();
+}
+$('#msSignIn').addEventListener('click', () => { readSettings(); signIn(); });
+$('#msSignOut').addEventListener('click', () => { store.del('ms'); store.del('msName'); store.del('folders'); folders = null; renderSettings(); toast('Signed out of OneDrive'); });
+
+/* ---------- settings ---------- */
+function renderSettings(){
+  $('#setAuto').checked = settings.autoBreaks;
+  $('#setEmail').value = settings.emailTo;
+  $('#setScript').value = settings.scriptUrl;
+  $('#setKey').value = settings.scriptKey;
+  $('#setClient').value = settings.clientId;
+  $('#setPath').value = settings.jobsPath;
+  $('#redirectShow').textContent = redirectUri();
+  $('#emailHint').textContent = settings.scriptUrl
+    ? 'Email is sent automatically from your Google account when you tap Send.'
+    : 'Without the script, tapping Send opens Mail with the email ready; you press Send there.';
+  const ms = store.get('ms', null);
+  const signed = !!(ms && (ms.refresh || ms.exp > Date.now()));
+  $('#msSignIn').textContent = signed ? 'Sign in again' : 'Sign in to Microsoft';
+  $('#msSignOut').hidden = !ms;
+  $('#msState').textContent = !settings.clientId ? 'Not set up. Transcriptions go by email only.'
+    : signed ? `Connected${store.get('msName', '') ? ' as ' + store.get('msName', '') : ''}. Saves to ${settings.jobsPath}.`
+    : ms ? 'Sign-in has expired. Tap “Sign in again”.' : 'Not signed in yet.';
+}
+function readSettings(){
+  settings = {
+    autoBreaks: $('#setAuto').checked,
+    emailTo: $('#setEmail').value.trim(),
+    scriptUrl: $('#setScript').value.trim(),
+    scriptKey: $('#setKey').value.trim(),
+    clientId: $('#setClient').value.trim(),
+    jobsPath: $('#setPath').value.trim().replace(/^\/+|\/+$/g, '').replace(/\\/g, '/') || DEFAULTS.jobsPath
+  };
+  store.set('settings', settings);
+}
+$('#settingsBtn').addEventListener('click', () => { renderSettings(); openSheet('#settingsSheet'); });
+document.querySelectorAll('#settingsSheet input').forEach(i => i.addEventListener('change', () => { readSettings(); renderSettings(); }));
+
+/* ---------- sending ---------- */
+function plan(){
+  const od = !!(settings.clientId && job && job.folder);
+  return { od, email: settings.emailTo ? (settings.scriptUrl ? 'auto' : 'mail') : 'none' };
+}
+$('#sendBtn').addEventListener('click', () => {
+  if (!ta.value.trim()) return;
+  if (!job || !job.vessel){ toast('Choose the vessel first'); $('#jobBtn').click(); return; }
+  const p = plan(), now = new Date();
+  const fname = `${safeName(job.vessel)} Transcript ${ymd(now)} ${hm(now)}.txt`;
+  const dl = $('#sendSummary'); dl.textContent = '';
+  const add = (k, v) => { const dt = document.createElement('dt'), dd = document.createElement('dd'); dt.textContent = k; dd.textContent = v; dl.append(dt, dd); };
+  add('Vessel', job.vessel);
+  add('OneDrive', p.od ? `${job.folder} / ${fname}` : (settings.clientId ? 'Not saved: no job folder chosen' : 'Not set up'));
+  add('Email', p.email === 'none' ? 'No address set' : `${settings.emailTo}${p.email === 'mail' ? ' (opens Mail)' : ''}`);
+  add('Subject', `${job.vessel} Transcript`);
+  $('#sendNote').textContent = 'The text is kept in Sent until both steps have gone through, so nothing is lost without signal.';
+  $('#confirmSend').dataset.fname = fname;
+  openSheet('#sendSheet');
+});
+$('#confirmSend').addEventListener('click', e => {
+  const p = plan(), now = new Date();
+  const item = {
+    id: now.getTime().toString(36), at: now.toISOString(), vessel: job.vessel, folder: p.od ? job.folder : null,
+    fname: e.currentTarget.dataset.fname, text: ta.value.trim() + '\n',
+    od: p.od ? 'pending' : 'skip', em: p.email === 'auto' ? 'pending' : p.email === 'mail' ? 'mail' : 'skip', msg: ''
+  };
+  outbox.unshift(item); outbox = outbox.slice(0, 40); saveOutbox();
+  setText('');
+  closeSheets();
+  const run = processItem(item);
+  if (item.em === 'mail') openMail(item);
+  run.then(() => summarise(item));
+});
+function summarise(it){
+  const parts = [];
+  if (it.od === 'done') parts.push('Saved to OneDrive'); else if (it.od === 'pending') parts.push('OneDrive waiting');
+  if (it.em === 'done') parts.push('emailed'); else if (it.em === 'pending') parts.push('email waiting'); else if (it.em === 'opened') parts.push('opened in Mail');
+  toast(parts.length ? parts.join(', ').replace(/^./, c => c.toUpperCase()) : 'Kept in Sent', 3500);
+}
+function mailUrl(it){
+  return `mailto:${encodeURIComponent(settings.emailTo)}?subject=${encodeURIComponent(it.vessel + ' Transcript')}&body=${encodeURIComponent(it.text)}`;
+}
+function openMail(it){ it.em = 'opened'; saveOutbox(); location.href = mailUrl(it); }
+
+async function processItem(it){
+  if (it.busy) return; it.busy = true; it.msg = '';
+  try {
+    if (it.od === 'pending'){
+      try {
+        const tok = await getToken();
+        if (!tok) it.msg = 'Sign in to Microsoft (Settings) to save to OneDrive.';
+        else {
+          const url = `${GRAPH}/me/drive/root:/${encPath(settings.jobsPath)}/${encodeURIComponent(it.folder)}/${encodeURIComponent(it.fname)}:/content?@microsoft.graph.conflictBehavior=rename`;
+          const r = await fetch(url, { method: 'PUT', headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'text/plain; charset=utf-8' }, body: it.text });
+          if (!r.ok) throw new Error(r.status === 404 ? 'Job folder not found on OneDrive.' : 'OneDrive said ' + r.status);
+          it.od = 'done';
+        }
+      } catch(e){ it.msg = navigator.onLine ? e.message : 'No signal. Will retry.'; }
+    }
+    if (it.em === 'pending'){
+      try {
+        const r = await fetch(settings.scriptUrl, { method: 'POST', body: JSON.stringify({
+          key: settings.scriptKey, to: settings.emailTo, subject: `${it.vessel} Transcript`, body: it.text, filename: it.fname }) });
+        const j = await r.json().catch(() => ({}));
+        if (!j.ok) throw new Error(j.error || 'Email script did not reply');
+        it.em = 'done';
+      } catch(e){ it.msg = (it.msg ? it.msg + ' ' : '') + (navigator.onLine ? 'Email: ' + e.message : 'No signal. Will retry.'); }
+    }
+  } finally { it.busy = false; saveOutbox(); }
+}
+function pending(){ return outbox.filter(i => i.od === 'pending' || i.em === 'pending'); }
+async function processOutbox(){ for (const it of pending()) await processItem(it); }
+function saveOutbox(){
+  store.set('outbox', outbox.map(i => { const c = Object.assign({}, i); delete c.busy; return c; }));
+  const n = pending().length;
+  $('#pendingPill').hidden = !n; $('#pendingPill').textContent = `${n} waiting`;
+  $('#retryAll').hidden = !n;
+  if (!$('#historySheet').hidden) renderHistory();
+}
+
+/* ---------- history ---------- */
+function chip(label, cls){ const s = document.createElement('span'); s.className = 'chip ' + cls; s.textContent = label; return s; }
+function renderHistory(){
+  const body = $('#historyBody'); body.textContent = '';
+  if (!outbox.length){ const p = document.createElement('p'); p.className = 'hint'; p.textContent = 'Nothing sent yet. Sent transcriptions are kept here on this phone.'; body.append(p); return; }
+  for (const it of outbox){
+    const g = document.createElement('div'); g.className = 'group';
+    const d = new Date(it.at);
+    const head = document.createElement('div'); head.className = 'item'; head.style.border = '1px solid var(--line)'; head.style.borderRadius = '12px';
+    const words = it.text.trim().split(/\s+/).length;
+    head.innerHTML = '<span class="t"></span><span class="s"></span><div class="chips"></div><p class="hint"></p><div class="actions"></div>';
+    head.querySelector('.t').textContent = it.vessel;
+    head.querySelector('.s').textContent = `${d.toLocaleDateString('en-GB', { day:'numeric', month:'short' })} ${d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' })} · ${words} words`;
+    const chips = head.querySelector('.chips');
+    chips.append(it.od === 'done' ? chip('OneDrive ✓', 'ok') : it.od === 'pending' ? chip('OneDrive waiting', 'wait') : chip('No OneDrive', ''));
+    chips.append(it.em === 'done' ? chip('Emailed ✓', 'ok') : it.em === 'pending' ? chip('Email waiting', 'wait') : it.em === 'opened' ? chip('Opened in Mail', '') : it.em === 'mail' ? chip('Mail not opened', 'wait') : chip('No email', ''));
+    head.querySelector('.hint').textContent = it.msg || '';
+    const acts = head.querySelector('.actions');
+    const btn = (label, fn) => { const b = document.createElement('button'); b.className = 'btn'; b.textContent = label; b.addEventListener('click', fn); acts.append(b); };
+    if (it.od === 'pending' || it.em === 'pending') btn('Retry', () => processItem(it).then(() => summarise(it)));
+    if (settings.emailTo) btn('Email', () => openMail(it));
+    btn('Copy', () => copyText(it.text.trim()));
+    btn('Edit again', () => {
+      if (ta.value.trim()){ toast('Send or clear the current note first'); return; }
+      setText(it.text.trim()); setJob({ vessel: it.vessel, folder: it.folder }); closeSheets();
+    });
+    g.append(head); body.append(g);
+  }
+}
+$('#historyBtn').addEventListener('click', () => { renderHistory(); openSheet('#historySheet'); });
+$('#pendingPill').addEventListener('click', () => { renderHistory(); openSheet('#historySheet'); });
+$('#retryAll').addEventListener('click', () => processOutbox());
+window.addEventListener('online', processOutbox);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') processOutbox(); });
+
+/* ---------- start ---------- */
+renderJob(); counts(); saveOutbox();
+$('#saved').textContent = ta.value ? 'Saved on this phone' : '';
+handleRedirect().then(processOutbox);
+if ('serviceWorker' in navigator && /github\.io$/.test(location.hostname)){
+  try { navigator.serviceWorker.register('sw.js').catch(() => {}); } catch(e){}
+}
+})();
+</script>
+</body>
+</html>
