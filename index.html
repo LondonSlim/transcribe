@@ -16,7 +16,7 @@
 <title>Transcribe</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
-/* Layout: one fixed screen sized to the visible viewport (keyboard-aware): header, toolbar, full-height transcript. */
+/* Layout: one fixed screen sized to the visible viewport (keyboard-aware): header, vessel row, toolbar, full-height note. */
 :root{
   --bg:#eef4f9; --surface:#ffffff; --ink:#14233f; --muted:#5b6b82; --line:#d3dde8;
   --navy:#1b2f57; --on-navy:#ffffff; --pale:#d6e7f4;
@@ -38,22 +38,24 @@ button{cursor:pointer;-webkit-tap-highlight-color:transparent}
 
 .app{position:fixed;left:0;right:0;top:var(--vvtop,0px);height:var(--vvh,100%);display:flex;flex-direction:column;
   padding-top:env(safe-area-inset-top,0px);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-header{display:flex;align-items:center;gap:10px;padding-block:10px 6px}
-.mark{width:30px;height:30px;border-radius:8px;flex:none;background:var(--pale);display:grid;place-items:center;overflow:hidden;position:relative}
-.mark::before{content:"";position:absolute;inset:auto -4px 0 -4px;height:45%;background:repeating-radial-gradient(circle at 50% -60%,transparent 0 9px,color-mix(in srgb,var(--navy) 14%,transparent) 9px 11px)}
-.mark b{font:700 21px/1 var(--ui);color:var(--navy);position:relative}
+header{display:flex;align-items:center;gap:6px;padding-block:10px 6px}
+.mark{width:30px;height:30px;border-radius:8px;flex:none;margin-right:4px;display:block}
 h1{font:600 21px/1 var(--ui);letter-spacing:.01em;margin:0;flex:1}
 .icon-btn{border:0;background:none;width:40px;height:40px;border-radius:10px;display:grid;place-items:center;color:var(--muted)}
 .icon-btn:active{background:var(--pale)}
 .icon-btn svg{width:22px;height:22px}
 .pill{border:0;border-radius:99px;padding:4px 10px;font-size:13px;background:color-mix(in srgb,var(--wait) 16%,transparent);color:var(--wait)}
 
-.toolbar{display:flex;gap:8px;align-items:center;padding-block:4px 10px}
-.job{flex:1;min-width:0;display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:9px 12px;text-align:left}
-.job span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.job small{color:var(--muted);font-size:12px;letter-spacing:.06em;text-transform:uppercase;flex:none}
-.job.empty span{color:var(--muted)}
+.vessel{display:flex;gap:8px;align-items:stretch;padding-block:4px}
+.vessel input{flex:1;min-width:0;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:10px 12px;font-size:18px;font-weight:600}
+.vessel input::placeholder{font-weight:400;color:var(--muted)}
+.folder-tag{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);padding:2px 2px 0;min-width:0}
+.folder-tag span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.folder-tag button{border:0;background:none;color:var(--muted);font-size:13px;text-decoration:underline;padding:2px 4px}
+.toolbar{display:flex;gap:8px;align-items:center;padding-block:6px 10px}
+.toolbar .grow{flex:1}
 .tbtn{border:1px solid var(--line);background:var(--surface);border-radius:12px;height:42px;min-width:42px;padding:0 12px;display:grid;place-items:center;font-size:15px}
+.tbtn svg{width:20px;height:20px}
 .tbtn:active{background:var(--pale)}
 .primary{background:var(--navy);border-color:var(--navy);color:var(--on-navy);font-weight:600}
 .primary:active{filter:brightness(1.1);background:var(--navy)}
@@ -71,16 +73,16 @@ textarea#text::placeholder{color:var(--muted);font-family:var(--ui);font-size:16
 .sheet{position:fixed;left:0;right:0;bottom:0;z-index:21;max-height:88%;display:flex;flex-direction:column;background:var(--surface);
   border-radius:18px 18px 0 0;box-shadow:0 -8px 30px rgba(0,0,0,.18);
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+.sheet.tall{height:88%}
 .sheet-head{display:flex;align-items:center;gap:8px;padding-block:14px 8px}
 .sheet-head h2{flex:1;margin:0;font:600 19px/1.2 var(--ui)}
-.sheet-body{overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:16px;padding-bottom:6px}
+.sheet-body{overflow-y:auto;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:16px;padding-bottom:6px;flex:1;min-height:0}
 .group{display:flex;flex-direction:column;gap:8px}
 .label{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.sub{font-size:14px;color:var(--muted);margin-bottom:-4px}
 .field{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 12px;font-size:16px}
-.row{display:flex;gap:8px;align-items:center}
-.row > .field{flex:1;min-width:0}
 .hint{font-size:14px;color:var(--muted);line-height:1.45;margin:0}
-.hint code,.mono{font-family:ui-monospace,Menlo,monospace;font-size:13px;word-break:break-all}
+.mono{font-family:ui-monospace,Menlo,monospace;font-size:13px;word-break:break-all}
 .check{display:flex;gap:10px;align-items:flex-start;font-size:16px}
 .check input{width:22px;height:22px;margin:0;accent-color:var(--navy);flex:none}
 .list{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:12px;overflow:hidden}
@@ -89,6 +91,12 @@ textarea#text::placeholder{color:var(--muted);font-family:var(--ui);font-size:16
 .item:active,.item.sel{background:var(--pale)}
 .item .t{font-size:16px}
 .item .s{font-size:13px;color:var(--muted)}
+.card{display:flex;flex-direction:column;gap:6px;border:1px solid var(--line);border-radius:12px;padding:12px}
+.card.current{border-color:var(--navy)}
+.card .t{font-size:17px;font-weight:600}
+.card .t.none{font-weight:400;color:var(--muted)}
+.card .s{font-size:13px;color:var(--muted)}
+.card .peek{font:14px/1.4 var(--text);color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .summary{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:15px;margin:0}
 .summary dt{color:var(--muted)}
 .summary dd{margin:0;min-width:0;overflow-wrap:anywhere}
@@ -100,10 +108,10 @@ textarea#text::placeholder{color:var(--muted);font-family:var(--ui);font-size:16
 .actions{display:flex;gap:8px;flex-wrap:wrap}
 .btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:9px 14px;font-size:15px}
 .btn.primary{background:var(--navy);border-color:var(--navy);color:var(--on-navy);font-weight:600}
-.sub{font-size:14px;color:var(--muted);margin-bottom:-4px}
 .btn.wide{width:100%;padding:13px;font-size:17px}
 .danger{color:var(--err)}
-.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom,0px));z-index:30;max-width:calc(100% - 32px);
+.btn.armed{background:var(--err);border-color:var(--err);color:var(--surface)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);top:calc(38% + env(safe-area-inset-top,0px));z-index:30;max-width:calc(100% - 32px);
   background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:15px;box-shadow:0 6px 20px rgba(0,0,0,.25)}
 @media (prefers-reduced-motion:no-preference){.sheet{animation:up .18s ease-out}@keyframes up{from{transform:translateY(30px);opacity:.6}}}
 </style>
@@ -111,21 +119,30 @@ textarea#text::placeholder{color:var(--muted);font-family:var(--ui);font-size:16
 <body>
 <div class="app" id="app">
   <header>
-    <div class="mark" aria-hidden="true"><b>T</b></div>
+    <img class="mark" alt="" aria-hidden="true" src="data:image/png;base64,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">
     <h1>Transcribe</h1>
     <button class="pill" id="pendingPill" hidden></button>
-    <button class="icon-btn" id="historyBtn" aria-label="Sent transcriptions">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v4h4"/><path d="M12 7v5l3 2"/></svg>
+    <button class="icon-btn" id="notesBtn" aria-label="Saved notes">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg>
     </button>
     <button class="icon-btn" id="settingsBtn" aria-label="Settings">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
     </button>
   </header>
 
+  <div class="vessel">
+    <input id="vessel" type="text" placeholder="Vessel name" autocomplete="off" autocapitalize="words" spellcheck="false" aria-label="Vessel name">
+    <button class="tbtn" id="folderBtn" aria-label="Choose OneDrive job folder" title="Choose OneDrive job folder" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+    </button>
+  </div>
+  <div class="folder-tag" id="folderTag" hidden><span id="folderName"></span><button id="folderClear">Remove</button></div>
+
   <div class="toolbar">
-    <button class="job empty" id="jobBtn"><span id="jobLabel">Choose vessel</span><small id="jobTag"></small></button>
+    <button class="tbtn" id="newBtn">New</button>
     <button class="tbtn" id="paraBtn" aria-label="New paragraph" title="New paragraph">¶</button>
     <button class="tbtn" id="copyBtn">Copy</button>
+    <span class="grow"></span>
     <button class="tbtn primary" id="sendBtn">Send</button>
   </div>
 
@@ -137,51 +154,43 @@ textarea#text::placeholder{color:var(--muted);font-family:var(--ui);font-size:16
   <div class="foot"></div>
 </div>
 
-<!-- Job sheet -->
 <div class="scrim" id="scrim" hidden></div>
-<section class="sheet" id="jobSheet" hidden aria-label="Choose vessel">
-  <div class="sheet-head"><h2>Vessel</h2><button class="btn" data-close>Done</button></div>
+
+<!-- Folder sheet -->
+<section class="sheet tall" id="folderSheet" hidden aria-label="Choose job folder">
+  <div class="sheet-head"><h2>Job folder</h2><button class="btn" data-close>Done</button></div>
   <div class="sheet-body">
-    <div class="group" id="odJobs" hidden>
-      <span class="label">Job folders on OneDrive</span>
-      <input class="field" id="folderFilter" type="search" placeholder="Search job folders" autocomplete="off">
-      <div class="list" id="folderList"></div>
-      <p class="hint" id="folderMsg"></p>
-    </div>
-    <div class="group">
-      <span class="label" id="manualLabel">Vessel name</span>
-      <input class="field" id="vesselInput" type="text" placeholder="e.g. Kingfisher" autocomplete="off" autocapitalize="words">
-      <p class="hint" id="manualHint">Used for the email subject, “[Vessel] Transcript”.</p>
-    </div>
+    <input class="field" id="folderFilter" type="search" placeholder="Search job folders" autocomplete="off">
+    <div class="list" id="folderList"></div>
+    <p class="hint" id="folderMsg"></p>
   </div>
 </section>
 
+<!-- Notes sheet -->
+<section class="sheet tall" id="notesSheet" hidden aria-label="Saved notes">
+  <div class="sheet-head"><h2>Notes</h2><button class="btn" id="retryAll" hidden>Retry</button><button class="btn" data-close>Done</button></div>
+  <div class="sheet-body" id="notesBody"></div>
+</section>
+
 <!-- Send sheet -->
-<section class="sheet" id="sendSheet" hidden aria-label="Send transcription">
-  <div class="sheet-head"><h2>Send transcription</h2><button class="btn" data-close>Cancel</button></div>
+<section class="sheet" id="sendSheet" hidden aria-label="Send note">
+  <div class="sheet-head"><h2>Send</h2><button class="btn" data-close>Cancel</button></div>
   <div class="sheet-body">
     <dl class="summary" id="sendSummary"></dl>
-    <p class="hint" id="sendNote"></p>
+    <p class="hint">The note stays in Notes after sending. Only you can delete it.</p>
     <button class="btn primary wide" id="confirmSend">Send</button>
   </div>
 </section>
 
-<!-- History sheet -->
-<section class="sheet" id="historySheet" hidden aria-label="Sent transcriptions">
-  <div class="sheet-head"><h2>Sent</h2><button class="btn" id="retryAll" hidden>Retry all</button><button class="btn" data-close>Done</button></div>
-  <div class="sheet-body" id="historyBody"></div>
-</section>
-
 <!-- Settings sheet -->
-<section class="sheet" id="settingsSheet" hidden aria-label="Settings">
+<section class="sheet tall" id="settingsSheet" hidden aria-label="Settings">
   <div class="sheet-head"><h2>Settings</h2><button class="btn" data-close>Done</button></div>
   <div class="sheet-body">
     <div class="group">
       <span class="label">Dictation</span>
       <label class="check"><input type="checkbox" id="setAuto"> <span>Start each dictation on a new paragraph</span></label>
-      <p class="hint">Text arriving in one go from the keyboard at the end of the note gets two line breaks in front. Ordinary typing and dictating into the middle of the text are left alone. The ¶ button adds a break by hand.</p>
+      <p class="hint">Text arriving in one go at the end of the note gets two line breaks in front. Typing, and dictating into the middle of the text, are left alone. The ¶ button adds a break by hand.</p>
     </div>
-
     <div class="group">
       <span class="label">Email</span>
       <label class="sub" for="setEmail">Send to</label>
@@ -192,7 +201,6 @@ textarea#text::placeholder{color:var(--muted);font-family:var(--ui);font-size:16
       <input class="field" id="setKey" type="text" autocomplete="off" autocapitalize="off">
       <p class="hint" id="emailHint"></p>
     </div>
-
     <div class="group">
       <span class="label">OneDrive</span>
       <label class="sub" for="setClient">Microsoft application (client) ID</label>
@@ -203,10 +211,9 @@ textarea#text::placeholder{color:var(--muted);font-family:var(--ui);font-size:16
       <p class="hint" id="msState"></p>
       <p class="hint">Redirect address to register with Microsoft:<br><span class="mono" id="redirectShow"></span></p>
     </div>
-
     <div class="group">
-      <span class="label">This note</span>
-      <div class="actions"><button class="btn danger" id="clearBtn">Clear text</button></div>
+      <span class="label">Storage</span>
+      <p class="hint" id="storageState"></p>
     </div>
   </div>
 </section>
@@ -217,159 +224,196 @@ textarea#text::placeholder{color:var(--muted);font-family:var(--ui);font-size:16
 (() => {
 'use strict';
 const $ = s => document.querySelector(s);
-const store = {
+const ls = {
   get(k, d){ try{ const v = localStorage.getItem('tx.'+k); return v == null ? d : JSON.parse(v); }catch(e){ return d; } },
-  set(k, v){ try{ localStorage.setItem('tx.'+k, JSON.stringify(v)); }catch(e){} },
+  set(k, v){ try{ localStorage.setItem('tx.'+k, JSON.stringify(v)); return true; }catch(e){ return false; } },
   del(k){ try{ localStorage.removeItem('tx.'+k); }catch(e){} }
 };
 const DEFAULTS = { emailTo:'hugh@isis-marine.co.uk', scriptUrl:'', scriptKey:'', clientId:'', jobsPath:'Boat Surveyor/Jobs', autoBreaks:true };
-let settings = Object.assign({}, DEFAULTS, store.get('settings', {}));
-let job = store.get('job', null);          // {vessel, folder}
-let outbox = store.get('outbox', []);      // sent / pending items
-const MIN_CHARS = 12;                      // smallest chunk treated as a dictation
+let settings = Object.assign({}, DEFAULTS, ls.get('settings', {}));
+const MIN_CHARS = 12;
 const AUTH = 'https://login.microsoftonline.com/consumers/oauth2/v2.0';
 const GRAPH = 'https://graph.microsoft.com/v1.0';
 const SCOPES = 'Files.ReadWrite offline_access';
 
+/* ---------- storage: every note kept twice (IndexedDB + localStorage) ---------- */
+const idb = (() => {
+  let dbp;
+  const open = () => dbp || (dbp = new Promise((res, rej) => {
+    const r = indexedDB.open('transcribe', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('notes', { keyPath: 'id' });
+    r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error);
+  }));
+  const tx = (mode, fn) => open().then(db => new Promise((res, rej) => {
+    const t = db.transaction('notes', mode); const q = fn(t.objectStore('notes'));
+    t.oncomplete = () => res(q && q.result); t.onerror = () => rej(t.error);
+  }));
+  return {
+    all: () => tx('readonly', s => s.getAll()).catch(() => []),
+    put: n => tx('readwrite', s => s.put(n)).then(() => true).catch(() => false),
+    del: id => tx('readwrite', s => s.delete(id)).catch(() => {})
+  };
+})();
+let notes = new Map();
+let current = null;
+const clean = n => { const c = Object.assign({}, n); delete c.busy; return c; };
+function mirror(){ return ls.set('notes', [...notes.values()].map(clean)); }
+let idbT;
+function persist(n, now){
+  const okLs = mirror();
+  clearTimeout(idbT);
+  const write = () => idb.put(clean(n)).then(ok => showSaved(ok || okLs));
+  if (now) write(); else { idbT = setTimeout(write, 350); showSaved(okLs); }
+}
+function showSaved(ok){
+  const t = new Date();
+  $('#saved').textContent = current && current.text ? (ok ? `Saved ${pad(t.getHours())}:${pad(t.getMinutes())}` : 'NOT SAVED – copy your text') : '';
+  $('#saved').style.color = ok ? '' : 'var(--err)';
+}
+async function loadNotes(){
+  const fromIdb = await idb.all();
+  const fromLs = ls.get('notes', []);
+  for (const n of [...fromIdb, ...fromLs]){
+    const have = notes.get(n.id);
+    if (!have || (n.updated || 0) > (have.updated || 0)) notes.set(n.id, n);
+  }
+  // carry over anything from the first version of the app
+  const oldDraft = ls.get('draft', null), oldJob = ls.get('job', null), oldOut = ls.get('outbox', null);
+  if (oldOut) for (const o of oldOut){
+    const t = Date.parse(o.at) || Date.now();
+    if (!notes.has('o' + o.id)) notes.set('o' + o.id, { id: 'o' + o.id, vessel: o.vessel || '', folder: o.folder || null, text: (o.text || '').trim(),
+      created: t, updated: t, sentAt: t, od: o.od === 'done' ? 'done' : 'none', em: o.em === 'done' ? 'done' : o.em === 'opened' ? 'opened' : 'none', msg: '' });
+  }
+  if (oldDraft && oldDraft.trim()){
+    const t = Date.now(), id = 'd' + t.toString(36);
+    notes.set(id, { id, vessel: (oldJob && oldJob.vessel) || '', folder: (oldJob && oldJob.folder) || null, text: oldDraft, created: t, updated: t, od: 'none', em: 'none', msg: '' });
+    ls.set('current', id);
+  }
+  if (oldOut || oldDraft != null){ ls.del('outbox'); ls.del('draft'); ls.del('job'); }
+  for (const n of notes.values()){ if (n.od === 'skip') n.od = 'none'; if (n.em === 'skip' || n.em === 'mail') n.em = 'none'; }
+  mirror(); for (const n of notes.values()) idb.put(clean(n));
+}
+function newNote(){
+  const t = Date.now();
+  const n = { id: t.toString(36) + Math.random().toString(36).slice(2, 6), vessel: '', folder: null, text: '', created: t, updated: t, od: 'none', em: 'none', msg: '' };
+  notes.set(n.id, n); return n;
+}
+function openNote(n){
+  current = n; ls.set('current', n.id);
+  ta.value = n.text; last = n.text;
+  $('#vessel').value = n.vessel || '';
+  renderMeta(); counts(); showSaved(true);
+}
+function blankCurrent(){ return current && !current.text.trim() && !current.vessel.trim(); }
+function dropIfBlank(n){ if (n && !n.text.trim() && !n.vessel.trim()){ notes.delete(n.id); idb.del(n.id); mirror(); } }
+
 /* ---------- keyboard-aware sizing ---------- */
 const vv = window.visualViewport;
-function fit(){
-  const r = document.documentElement.style;
-  if (vv){ r.setProperty('--vvh', vv.height + 'px'); r.setProperty('--vvtop', vv.offsetTop + 'px'); }
-}
+function fit(){ if (vv){ const r = document.documentElement.style; r.setProperty('--vvh', vv.height + 'px'); r.setProperty('--vvtop', vv.offsetTop + 'px'); } }
 if (vv){ vv.addEventListener('resize', fit); vv.addEventListener('scroll', fit); }
 fit();
 
 /* ---------- toast ---------- */
 let toastT;
-function toast(msg, ms = 2600){
-  const t = $('#toast'); t.textContent = msg; t.hidden = false;
-  clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, ms);
+function toast(msg, ms = 2800){ const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, ms); }
+
+/* ---------- names & dates ---------- */
+const pad = n => String(n).padStart(2, '0');
+const ymd = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const hm = d => `${pad(d.getHours())}${pad(d.getMinutes())}`;
+function parseFolder(name){
+  const m = name.match(/^(.*?)\s+(\d{4})[-.](\d{2})[-.](\d{2})$/);
+  return m ? { vessel: m[1].trim(), date: `${m[2]}-${m[3]}-${m[4]}` } : { vessel: name, date: '' };
 }
+const safeName = s => s.replace(/[\\/:*?"<>|#%]/g, '-').trim();
+const fileName = n => `${safeName(n.vessel || 'Untitled')} Transcript ${ymd(new Date(n.created))} ${hm(new Date(n.created))}.txt`;
+const words = s => { s = s.trim(); return s ? s.split(/\s+/).length : 0; };
+const fmtWhen = t => { const d = new Date(t); return `${d.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' })}, ${pad(d.getHours())}:${pad(d.getMinutes())}`; };
 
 /* ---------- editor ---------- */
 const ta = $('#text');
-ta.value = store.get('draft', '');
-let last = ta.value;
-let savedT;
-
+let last = '';
 function counts(){
-  const v = ta.value.trim();
-  const words = v ? v.split(/\s+/).length : 0;
+  const v = ta.value.trim(), w = words(v);
   const paras = v ? v.split(/\n\s*\n/).filter(p => p.trim()).length : 0;
-  $('#count').textContent = `${words} word${words === 1 ? '' : 's'}` + (paras > 1 ? ` · ${paras} items` : '');
+  $('#count').textContent = `${w} word${w === 1 ? '' : 's'}` + (paras > 1 ? ` · ${paras} items` : '');
   $('#sendBtn').disabled = !v;
 }
-function saveDraft(){
-  store.set('draft', ta.value); counts();
-  $('#saved').textContent = ta.value ? 'Saved on this phone' : '';
-}
-
-// Detect text that arrived in one go (a dictation) and start it on a new paragraph.
 function applyBreaks(){
   const cur = ta.value, old = last;
-  if (cur.length <= old.length) return false;
+  if (cur.length <= old.length) return;
   const max = Math.min(cur.length, old.length);
   let p = 0; while (p < max && cur[p] === old[p]) p++;
   let s = 0; while (s < max - p && cur[cur.length - 1 - s] === old[old.length - 1 - s]) s++;
-  const removed = old.slice(p, old.length - s);
-  const inserted = cur.slice(p, cur.length - s);
+  const removed = old.slice(p, old.length - s), inserted = cur.slice(p, cur.length - s);
   const before = cur.slice(0, p), after = cur.slice(cur.length - s);
-  if (removed.trim() !== '') return false;           // a replacement (autocorrect etc.)
+  if (removed.trim() !== '') return;
   const body = inserted.trim();
-  if (body.length < MIN_CHARS || !/\s/.test(body)) return false; // ordinary typing
-  if (after.trim() !== '') return false;             // dictating into the middle: leave alone
-  const head = before.trim() === '' ? '' : before.replace(/\s+$/, '') + '\n\n';
-  const next = head + body;
-  if (next === cur) return false;
-  ta.value = next;
-  ta.setSelectionRange(next.length, next.length);
-  return true;
+  if (body.length < MIN_CHARS || !/\s/.test(body)) return;
+  if (after.trim() !== '') return;
+  const next = (before.trim() === '' ? '' : before.replace(/\s+$/, '') + '\n\n') + body;
+  if (next === cur) return;
+  ta.value = next; ta.setSelectionRange(next.length, next.length);
 }
-ta.addEventListener('input', e => {
-  if (settings.autoBreaks && !e.isComposing) applyBreaks();
-  last = ta.value; saveDraft();
-});
-ta.addEventListener('compositionend', () => { if (settings.autoBreaks) applyBreaks(); last = ta.value; saveDraft(); });
+function changed(){
+  if (!current) return;
+  current.text = ta.value; current.updated = Date.now();
+  last = ta.value; counts(); persist(current);
+}
+ta.addEventListener('input', e => { if (settings.autoBreaks && !e.isComposing) applyBreaks(); changed(); });
+ta.addEventListener('compositionend', () => { if (settings.autoBreaks) applyBreaks(); changed(); });
+window.addEventListener('pagehide', () => current && persist(current, true));
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && current) persist(current, true); });
 
-function setText(v){ ta.value = v; last = v; saveDraft(); }
+$('#vessel').addEventListener('input', e => {
+  current.vessel = e.target.value; current.updated = Date.now();
+  if (current.folder && parseFolder(current.folder).vessel.toLowerCase() !== current.vessel.trim().toLowerCase()) current.folder = null;
+  renderMeta(); persist(current);
+});
+$('#vessel').addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); ta.focus(); } });
 
 $('#paraBtn').addEventListener('click', () => {
   const v = ta.value.replace(/\s+$/, '');
-  setText(v ? v + '\n\n' : '');
+  ta.value = v ? v + '\n\n' : ''; changed();
   ta.focus(); ta.setSelectionRange(ta.value.length, ta.value.length);
 });
-
 async function copyText(text){
   try { await navigator.clipboard.writeText(text); toast('Copied'); }
-  catch(e){ ta.focus(); ta.select(); toast('Select-all done. Tap Copy in the menu.'); }
+  catch(e){ ta.focus(); ta.select(); toast('Text selected. Tap Copy in the menu.'); }
 }
 $('#copyBtn').addEventListener('click', () => { if (ta.value.trim()) copyText(ta.value.trim()); });
-
-let clearArmed = false;
-$('#clearBtn').addEventListener('click', e => {
-  if (!ta.value) { toast('Nothing to clear'); return; }
-  if (!clearArmed){ clearArmed = true; e.target.textContent = 'Tap again to clear'; setTimeout(() => { clearArmed = false; e.target.textContent = 'Clear text'; }, 3000); return; }
-  clearArmed = false; e.target.textContent = 'Clear text'; setText(''); closeSheets(); toast('Cleared');
+$('#newBtn').addEventListener('click', () => {
+  if (blankCurrent()){ $('#vessel').focus(); return; }
+  persist(current, true);
+  openNote(newNote()); persist(current, true);
+  toast('New note. The last one is in Notes.');
+  $('#vessel').focus();
 });
+
+function renderMeta(){
+  const od = onedriveReady();
+  $('#folderBtn').hidden = !od;
+  const f = current && current.folder;
+  $('#folderTag').hidden = !f;
+  if (f) $('#folderName').textContent = 'OneDrive: ' + settings.jobsPath.split('/').pop() + ' › ' + f;
+}
+$('#folderClear').addEventListener('click', () => { current.folder = null; current.updated = Date.now(); renderMeta(); persist(current); });
 
 /* ---------- sheets ---------- */
-function openSheet(id){
-  closeSheets(true);
-  ta.blur();
-  $('#scrim').hidden = false; $(id).hidden = false;
-}
-function closeSheets(quiet){
-  document.querySelectorAll('.sheet').forEach(s => s.hidden = true);
-  $('#scrim').hidden = true;
-  if (!quiet) renderJob();
-}
-$('#scrim').addEventListener('click', () => closeSheets());
-document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => closeSheets()));
+function openSheet(id){ closeSheets(); ta.blur(); $('#vessel').blur(); $('#scrim').hidden = false; $(id).hidden = false; }
+function closeSheets(){ document.querySelectorAll('.sheet').forEach(s => s.hidden = true); $('#scrim').hidden = true; }
+$('#scrim').addEventListener('click', closeSheets);
+document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', closeSheets));
 
-/* ---------- dates & names ---------- */
-const pad = n => String(n).padStart(2, '0');
-const ymd = d => `${d.getFullYear()}.${pad(d.getMonth()+1)}.${pad(d.getDate())}`;
-const hm = d => `${pad(d.getHours())}${pad(d.getMinutes())}`;
-function parseFolder(name){
-  const m = name.match(/^(.*?)\s+(\d{4})\.(\d{2})\.(\d{2})$/);
-  return m ? { vessel: m[1].trim(), date: `${m[2]}.${m[3]}.${m[4]}` } : { vessel: name, date: '' };
-}
-function safeName(s){ return s.replace(/[\\/:*?"<>|#%]/g, '-').trim(); }
-
-/* ---------- job ---------- */
-function renderJob(){
-  const b = $('#jobBtn');
-  if (job && job.vessel){
-    b.classList.remove('empty');
-    $('#jobLabel').textContent = job.vessel;
-    $('#jobTag').textContent = job.folder ? (parseFolder(job.folder).date || 'Folder') : 'Email only';
-  } else {
-    b.classList.add('empty'); $('#jobLabel').textContent = 'Choose vessel'; $('#jobTag').textContent = '';
-  }
-}
-function setJob(j){ job = j; store.set('job', j); renderJob(); }
-
-let folders = null;
-$('#jobBtn').addEventListener('click', async () => {
-  $('#vesselInput').value = job && !job.folder ? job.vessel : '';
-  openSheet('#jobSheet');
-  const od = onedriveReady();
-  $('#odJobs').hidden = !od;
-  $('#manualLabel').textContent = od ? 'Or type a vessel name (email only)' : 'Vessel name';
-  if (od) await loadFolders();
+/* ---------- OneDrive folders ---------- */
+let folders = ls.get('folders', null);
+$('#folderBtn').addEventListener('click', async () => {
+  $('#folderFilter').value = current.vessel.trim();
+  openSheet('#folderSheet'); renderFolders(); await loadFolders();
 });
-$('#vesselInput').addEventListener('input', e => {
-  const v = e.target.value.trim();
-  setJob(v ? { vessel: v, folder: null } : null);
-  renderFolders();
-});
-$('#vesselInput').addEventListener('keydown', e => { if (e.key === 'Enter') closeSheets(); });
 $('#folderFilter').addEventListener('input', renderFolders);
-
 async function loadFolders(){
-  const msg = $('#folderMsg');
-  msg.textContent = 'Loading job folders…';
+  const msg = $('#folderMsg'); msg.textContent = 'Loading job folders…';
   try {
     const tok = await getToken();
     if (!tok){ msg.textContent = 'Sign in to Microsoft in Settings to see your job folders.'; return; }
@@ -387,10 +431,8 @@ async function loadFolders(){
       if (da && db && da !== db) return db.localeCompare(da);
       return (b.mod || '').localeCompare(a.mod || '');
     });
-    store.set('folders', folders);
-    msg.textContent = '';
+    ls.set('folders', folders); msg.textContent = '';
   } catch(e){
-    folders = store.get('folders', null);
     msg.textContent = (navigator.onLine ? e.message : 'No signal.') + (folders ? ' Showing the last list.' : '');
   }
   renderFolders();
@@ -399,32 +441,34 @@ function renderFolders(){
   const list = $('#folderList'); list.textContent = '';
   if (!folders){ list.hidden = true; return; }
   const q = $('#folderFilter').value.trim().toLowerCase();
-  const shown = folders.filter(f => !q || f.name.toLowerCase().includes(q)).slice(0, q ? 60 : 25);
+  const shown = folders.filter(f => !q || f.name.toLowerCase().includes(q)).slice(0, q ? 80 : 30);
   list.hidden = !shown.length;
   for (const f of shown){
     const p = parseFolder(f.name);
     const b = document.createElement('button');
-    b.className = 'item' + (job && job.folder === f.name ? ' sel' : '');
+    b.className = 'item' + (current.folder === f.name ? ' sel' : '');
     b.innerHTML = '<span class="t"></span><span class="s"></span>';
     b.querySelector('.t').textContent = p.vessel;
     b.querySelector('.s').textContent = p.date || f.name;
-    b.addEventListener('click', () => { setJob({ vessel: p.vessel, folder: f.name }); $('#vesselInput').value = ''; closeSheets(); });
+    b.addEventListener('click', () => {
+      current.folder = f.name; current.vessel = p.vessel; current.updated = Date.now();
+      $('#vessel').value = p.vessel; renderMeta(); persist(current); closeSheets();
+    });
     list.appendChild(b);
   }
 }
 
-/* ---------- Microsoft sign-in (PKCE, no password ever touches this app) ---------- */
+/* ---------- Microsoft sign-in (PKCE: your password only ever goes to Microsoft) ---------- */
 const redirectUri = () => location.origin + location.pathname;
 const b64url = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
 const randStr = n => b64url(crypto.getRandomValues(new Uint8Array(n)));
 const encPath = p => p.split('/').filter(Boolean).map(encodeURIComponent).join('/');
-const onedriveReady = () => !!(settings.clientId && store.get('ms', null));
-
+const onedriveReady = () => !!(settings.clientId && ls.get('ms', null));
 async function signIn(){
   if (!settings.clientId){ toast('Enter the Microsoft client ID first'); return; }
   const verifier = randStr(48), state = randStr(16);
   const challenge = b64url(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier)));
-  store.set('pkce', { verifier, state });
+  ls.set('pkce', { verifier, state }); if (current) persist(current, true);
   const q = new URLSearchParams({ client_id: settings.clientId, response_type: 'code', redirect_uri: redirectUri(),
     response_mode: 'query', scope: SCOPES, state, code_challenge: challenge, code_challenge_method: 'S256' });
   location.href = `${AUTH}/authorize?${q}`;
@@ -435,39 +479,39 @@ async function tokenRequest(params){
   const j = await r.json().catch(() => ({}));
   if (!r.ok || !j.access_token) throw new Error(j.error_description ? j.error_description.split('\r')[0] : 'Sign-in failed');
   const ms = { access: j.access_token, refresh: j.refresh_token, exp: Date.now() + (j.expires_in - 120) * 1000 };
-  store.set('ms', ms); return ms;
+  ls.set('ms', ms); return ms;
 }
 async function handleRedirect(){
   const q = new URLSearchParams(location.search);
   if (!q.has('code') && !q.has('error')) return;
   history.replaceState(null, '', location.pathname);
-  const st = store.get('pkce', null); store.del('pkce');
+  const st = ls.get('pkce', null); ls.del('pkce');
   if (q.has('error')){ toast('Microsoft sign-in: ' + (q.get('error_description') || q.get('error')), 5000); return; }
   if (!st || st.state !== q.get('state')){ toast('Sign-in could not be confirmed. Please try again.', 4000); return; }
-  try { await tokenRequest({ grant_type: 'authorization_code', code: q.get('code'), code_verifier: st.verifier }); toast('Signed in to OneDrive'); await whoAmI(); }
+  try { await tokenRequest({ grant_type: 'authorization_code', code: q.get('code'), code_verifier: st.verifier }); toast('Signed in to OneDrive'); renderMeta(); await whoAmI(); }
   catch(e){ toast(e.message, 5000); }
 }
 async function getToken(){
-  const ms = store.get('ms', null);
+  const ms = ls.get('ms', null);
   if (!ms || !settings.clientId) return null;
   if (ms.exp > Date.now()) return ms.access;
   if (!ms.refresh) return null;
   try { return (await tokenRequest({ grant_type: 'refresh_token', refresh_token: ms.refresh })).access; }
-  catch(e){ if (!navigator.onLine) throw new Error('No signal'); store.set('ms', Object.assign(ms, { refresh: null })); return null; }
+  catch(e){ if (!navigator.onLine) throw new Error('No signal'); ls.set('ms', Object.assign(ms, { refresh: null })); return null; }
 }
 async function whoAmI(){
   try {
     const tok = await getToken(); if (!tok) return;
     const r = await fetch(`${GRAPH}/me/drive?$select=owner`, { headers: { Authorization: 'Bearer ' + tok } });
-    if (r.ok){ const j = await r.json(); store.set('msName', (j.owner && j.owner.user && j.owner.user.displayName) || 'your account'); }
+    if (r.ok){ const j = await r.json(); ls.set('msName', (j.owner && j.owner.user && j.owner.user.displayName) || ''); }
   } catch(e){}
   renderSettings();
 }
 $('#msSignIn').addEventListener('click', () => { readSettings(); signIn(); });
-$('#msSignOut').addEventListener('click', () => { store.del('ms'); store.del('msName'); store.del('folders'); folders = null; renderSettings(); toast('Signed out of OneDrive'); });
+$('#msSignOut').addEventListener('click', () => { ls.del('ms'); ls.del('msName'); renderSettings(); renderMeta(); toast('Signed out of OneDrive'); });
 
 /* ---------- settings ---------- */
-function renderSettings(){
+async function renderSettings(){
   $('#setAuto').checked = settings.autoBreaks;
   $('#setEmail').value = settings.emailTo;
   $('#setScript').value = settings.scriptUrl;
@@ -476,150 +520,165 @@ function renderSettings(){
   $('#setPath').value = settings.jobsPath;
   $('#redirectShow').textContent = redirectUri();
   $('#emailHint').textContent = settings.scriptUrl
-    ? 'Email is sent automatically from your Google account when you tap Send.'
-    : 'Without the script, tapping Send opens Mail with the email ready; you press Send there.';
-  const ms = store.get('ms', null);
+    ? 'Email goes automatically from your Google account when you tap Send.'
+    : 'Without the script, Send opens Mail with the email ready and you press Send there.';
+  const ms = ls.get('ms', null);
   const signed = !!(ms && (ms.refresh || ms.exp > Date.now()));
   $('#msSignIn').textContent = signed ? 'Sign in again' : 'Sign in to Microsoft';
   $('#msSignOut').hidden = !ms;
-  $('#msState').textContent = !settings.clientId ? 'Not set up. Transcriptions go by email only.'
-    : signed ? `Connected${store.get('msName', '') ? ' as ' + store.get('msName', '') : ''}. Saves to ${settings.jobsPath}.`
+  const who = ls.get('msName', '');
+  $('#msState').textContent = !settings.clientId ? 'Not set up. Notes go by email only.'
+    : signed ? `Connected${who ? ' as ' + who : ''}. Saves to ${settings.jobsPath}.`
     : ms ? 'Sign-in has expired. Tap “Sign in again”.' : 'Not signed in yet.';
+  let st = `${notes.size} note${notes.size === 1 ? '' : 's'} kept on this phone.`;
+  try { if (navigator.storage && navigator.storage.persisted) st += (await navigator.storage.persisted()) ? ' Storage is protected from automatic clearing.' : ' Add the app to your Home Screen so iOS keeps its storage.'; } catch(e){}
+  $('#storageState').textContent = st;
 }
 function readSettings(){
   settings = {
-    autoBreaks: $('#setAuto').checked,
-    emailTo: $('#setEmail').value.trim(),
-    scriptUrl: $('#setScript').value.trim(),
-    scriptKey: $('#setKey').value.trim(),
-    clientId: $('#setClient').value.trim(),
-    jobsPath: $('#setPath').value.trim().replace(/^\/+|\/+$/g, '').replace(/\\/g, '/') || DEFAULTS.jobsPath
+    autoBreaks: $('#setAuto').checked, emailTo: $('#setEmail').value.trim(),
+    scriptUrl: $('#setScript').value.trim(), scriptKey: $('#setKey').value.trim(), clientId: $('#setClient').value.trim(),
+    jobsPath: $('#setPath').value.trim().replace(/\\/g, '/').replace(/^\/+|\/+$/g, '') || DEFAULTS.jobsPath
   };
-  store.set('settings', settings);
+  ls.set('settings', settings);
 }
 $('#settingsBtn').addEventListener('click', () => { renderSettings(); openSheet('#settingsSheet'); });
-document.querySelectorAll('#settingsSheet input').forEach(i => i.addEventListener('change', () => { readSettings(); renderSettings(); }));
+document.querySelectorAll('#settingsSheet input').forEach(i => i.addEventListener('change', () => { readSettings(); renderSettings(); renderMeta(); }));
+
+/* ---------- save to Files ---------- */
+async function saveToFiles(n){
+  const file = new File([n.text.trim().replace(/\r?\n/g, '\r\n') + '\r\n'], fileName(n), { type: 'text/plain' });
+  try {
+    if (navigator.canShare && navigator.canShare({ files: [file] })){
+      await navigator.share({ files: [file] });
+      n.exported = Date.now(); persist(n, true); renderNotes(); return;
+    }
+  } catch(e){ if (e.name === 'AbortError') return; }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(file); a.download = file.name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+}
 
 /* ---------- sending ---------- */
-function plan(){
-  const od = !!(settings.clientId && job && job.folder);
-  return { od, email: settings.emailTo ? (settings.scriptUrl ? 'auto' : 'mail') : 'none' };
-}
 $('#sendBtn').addEventListener('click', () => {
   if (!ta.value.trim()) return;
-  if (!job || !job.vessel){ toast('Choose the vessel first'); $('#jobBtn').click(); return; }
-  const p = plan(), now = new Date();
-  const fname = `${safeName(job.vessel)} Transcript ${ymd(now)} ${hm(now)}.txt`;
+  if (!current.vessel.trim()){ toast('Enter the vessel name first'); $('#vessel').focus(); return; }
+  const od = !!(settings.clientId && current.folder);
   const dl = $('#sendSummary'); dl.textContent = '';
   const add = (k, v) => { const dt = document.createElement('dt'), dd = document.createElement('dd'); dt.textContent = k; dd.textContent = v; dl.append(dt, dd); };
-  add('Vessel', job.vessel);
-  add('OneDrive', p.od ? `${job.folder} / ${fname}` : (settings.clientId ? 'Not saved: no job folder chosen' : 'Not set up'));
-  add('Email', p.email === 'none' ? 'No address set' : `${settings.emailTo}${p.email === 'mail' ? ' (opens Mail)' : ''}`);
-  add('Subject', `${job.vessel} Transcript`);
-  $('#sendNote').textContent = 'The text is kept in Sent until both steps have gone through, so nothing is lost without signal.';
-  $('#confirmSend').dataset.fname = fname;
+  add('Vessel', current.vessel.trim());
+  add('Email', settings.emailTo ? settings.emailTo + (settings.scriptUrl ? '' : ' (opens Mail)') : 'No address set');
+  add('Subject', `${current.vessel.trim()} Transcript`);
+  add('OneDrive', od ? `${current.folder} › ${fileName(current)}` : settings.clientId ? 'Not saved: no job folder chosen' : 'Not set up');
   openSheet('#sendSheet');
 });
-$('#confirmSend').addEventListener('click', e => {
-  const p = plan(), now = new Date();
-  const item = {
-    id: now.getTime().toString(36), at: now.toISOString(), vessel: job.vessel, folder: p.od ? job.folder : null,
-    fname: e.currentTarget.dataset.fname, text: ta.value.trim() + '\n',
-    od: p.od ? 'pending' : 'skip', em: p.email === 'auto' ? 'pending' : p.email === 'mail' ? 'mail' : 'skip', msg: ''
-  };
-  outbox.unshift(item); outbox = outbox.slice(0, 40); saveOutbox();
-  setText('');
-  closeSheets();
-  const run = processItem(item);
-  if (item.em === 'mail') openMail(item);
-  run.then(() => summarise(item));
+$('#confirmSend').addEventListener('click', () => {
+  const n = current;
+  n.vessel = n.vessel.trim(); n.sentAt = Date.now(); n.msg = '';
+  if (settings.clientId && n.folder) n.od = 'pending';
+  if (settings.emailTo) n.em = settings.scriptUrl ? 'pending' : 'opened';
+  persist(n, true); closeSheets();
+  const run = processNote(n);
+  if (settings.emailTo && !settings.scriptUrl) location.href = mailUrl(n);
+  run.then(() => summarise(n));
 });
-function summarise(it){
+function summarise(n){
   const parts = [];
-  if (it.od === 'done') parts.push('Saved to OneDrive'); else if (it.od === 'pending') parts.push('OneDrive waiting');
-  if (it.em === 'done') parts.push('emailed'); else if (it.em === 'pending') parts.push('email waiting'); else if (it.em === 'opened') parts.push('opened in Mail');
-  toast(parts.length ? parts.join(', ').replace(/^./, c => c.toUpperCase()) : 'Kept in Sent', 3500);
+  if (n.em === 'done') parts.push('Emailed'); else if (n.em === 'pending') parts.push('Email waiting'); else if (n.em === 'opened') parts.push('Opened in Mail');
+  if (n.od === 'done') parts.push('saved to OneDrive'); else if (n.od === 'pending') parts.push('OneDrive waiting');
+  toast((parts.join(', ') || 'Kept in Notes') + '. Kept in Notes.', 3500);
 }
-function mailUrl(it){
-  return `mailto:${encodeURIComponent(settings.emailTo)}?subject=${encodeURIComponent(it.vessel + ' Transcript')}&body=${encodeURIComponent(it.text)}`;
+function mailUrl(n){
+  const body = n.text.trim().replace(/\r?\n/g, '\r\n');
+  return `mailto:${encodeURIComponent(settings.emailTo)}?subject=${encodeURIComponent(n.vessel + ' Transcript')}&body=${encodeURIComponent(body)}`;
 }
-function openMail(it){ it.em = 'opened'; saveOutbox(); location.href = mailUrl(it); }
-
-async function processItem(it){
-  if (it.busy) return; it.busy = true; it.msg = '';
+async function processNote(n){
+  if (n.busy) return; n.busy = true; n.msg = '';
   try {
-    if (it.od === 'pending'){
+    if (n.od === 'pending'){
       try {
         const tok = await getToken();
-        if (!tok) it.msg = 'Sign in to Microsoft (Settings) to save to OneDrive.';
+        if (!tok) n.msg = 'Sign in to Microsoft (Settings) to save to OneDrive.';
         else {
-          const url = `${GRAPH}/me/drive/root:/${encPath(settings.jobsPath)}/${encodeURIComponent(it.folder)}/${encodeURIComponent(it.fname)}:/content?@microsoft.graph.conflictBehavior=rename`;
-          const r = await fetch(url, { method: 'PUT', headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'text/plain; charset=utf-8' }, body: it.text });
+          const url = `${GRAPH}/me/drive/root:/${encPath(settings.jobsPath)}/${encodeURIComponent(n.folder)}/${encodeURIComponent(fileName(n))}:/content?@microsoft.graph.conflictBehavior=replace`;
+          const r = await fetch(url, { method: 'PUT', headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'text/plain; charset=utf-8' }, body: n.text.trim().replace(/\r?\n/g, '\r\n') + '\r\n' });
           if (!r.ok) throw new Error(r.status === 404 ? 'Job folder not found on OneDrive.' : 'OneDrive said ' + r.status);
-          it.od = 'done';
+          n.od = 'done'; n.odAt = Date.now();
         }
-      } catch(e){ it.msg = navigator.onLine ? e.message : 'No signal. Will retry.'; }
+      } catch(e){ n.msg = navigator.onLine ? e.message : 'No signal. Will retry.'; }
     }
-    if (it.em === 'pending'){
+    if (n.em === 'pending'){
       try {
         const r = await fetch(settings.scriptUrl, { method: 'POST', body: JSON.stringify({
-          key: settings.scriptKey, to: settings.emailTo, subject: `${it.vessel} Transcript`, body: it.text, filename: it.fname }) });
+          key: settings.scriptKey, to: settings.emailTo, subject: `${n.vessel} Transcript`, body: n.text.trim(), filename: fileName(n) }) });
         const j = await r.json().catch(() => ({}));
-        if (!j.ok) throw new Error(j.error || 'Email script did not reply');
-        it.em = 'done';
-      } catch(e){ it.msg = (it.msg ? it.msg + ' ' : '') + (navigator.onLine ? 'Email: ' + e.message : 'No signal. Will retry.'); }
+        if (!j.ok) throw new Error(j.error || 'the email script did not reply');
+        n.em = 'done'; n.emAt = Date.now();
+      } catch(e){ n.msg = (n.msg ? n.msg + ' ' : '') + (navigator.onLine ? 'Email: ' + e.message : 'No signal. Will retry.'); }
     }
-  } finally { it.busy = false; saveOutbox(); }
+  } finally { n.busy = false; persist(n, true); refreshPending(); renderNotes(); }
 }
-function pending(){ return outbox.filter(i => i.od === 'pending' || i.em === 'pending'); }
-async function processOutbox(){ for (const it of pending()) await processItem(it); }
-function saveOutbox(){
-  store.set('outbox', outbox.map(i => { const c = Object.assign({}, i); delete c.busy; return c; }));
-  const n = pending().length;
-  $('#pendingPill').hidden = !n; $('#pendingPill').textContent = `${n} waiting`;
-  $('#retryAll').hidden = !n;
-  if (!$('#historySheet').hidden) renderHistory();
+const pendingNotes = () => [...notes.values()].filter(n => n.od === 'pending' || n.em === 'pending');
+async function processAll(){ for (const n of pendingNotes()) await processNote(n); }
+function refreshPending(){
+  const k = pendingNotes().length;
+  $('#pendingPill').hidden = !k; $('#pendingPill').textContent = `${k} waiting`; $('#retryAll').hidden = !k;
 }
+window.addEventListener('online', processAll);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') processAll(); });
 
-/* ---------- history ---------- */
-function chip(label, cls){ const s = document.createElement('span'); s.className = 'chip ' + cls; s.textContent = label; return s; }
-function renderHistory(){
-  const body = $('#historyBody'); body.textContent = '';
-  if (!outbox.length){ const p = document.createElement('p'); p.className = 'hint'; p.textContent = 'Nothing sent yet. Sent transcriptions are kept here on this phone.'; body.append(p); return; }
-  for (const it of outbox){
-    const g = document.createElement('div'); g.className = 'group';
-    const d = new Date(it.at);
-    const head = document.createElement('div'); head.className = 'item'; head.style.border = '1px solid var(--line)'; head.style.borderRadius = '12px';
-    const words = it.text.trim().split(/\s+/).length;
-    head.innerHTML = '<span class="t"></span><span class="s"></span><div class="chips"></div><p class="hint"></p><div class="actions"></div>';
-    head.querySelector('.t').textContent = it.vessel;
-    head.querySelector('.s').textContent = `${d.toLocaleDateString('en-GB', { day:'numeric', month:'short' })} ${d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' })} · ${words} words`;
-    const chips = head.querySelector('.chips');
-    chips.append(it.od === 'done' ? chip('OneDrive ✓', 'ok') : it.od === 'pending' ? chip('OneDrive waiting', 'wait') : chip('No OneDrive', ''));
-    chips.append(it.em === 'done' ? chip('Emailed ✓', 'ok') : it.em === 'pending' ? chip('Email waiting', 'wait') : it.em === 'opened' ? chip('Opened in Mail', '') : it.em === 'mail' ? chip('Mail not opened', 'wait') : chip('No email', ''));
-    head.querySelector('.hint').textContent = it.msg || '';
-    const acts = head.querySelector('.actions');
-    const btn = (label, fn) => { const b = document.createElement('button'); b.className = 'btn'; b.textContent = label; b.addEventListener('click', fn); acts.append(b); };
-    if (it.od === 'pending' || it.em === 'pending') btn('Retry', () => processItem(it).then(() => summarise(it)));
-    if (settings.emailTo) btn('Email', () => openMail(it));
-    btn('Copy', () => copyText(it.text.trim()));
-    btn('Edit again', () => {
-      if (ta.value.trim()){ toast('Send or clear the current note first'); return; }
-      setText(it.text.trim()); setJob({ vessel: it.vessel, folder: it.folder }); closeSheets();
-    });
-    g.append(head); body.append(g);
+/* ---------- notes list ---------- */
+function chip(label, cls){ const s = document.createElement('span'); s.className = 'chip ' + (cls || ''); s.textContent = label; return s; }
+function renderNotes(){
+  if ($('#notesSheet').hidden) return;
+  const body = $('#notesBody'); body.textContent = '';
+  const list = [...notes.values()].filter(n => n.text.trim() || n.vessel.trim() || n === current).sort((a, b) => b.updated - a.updated);
+  if (!list.length){ const p = document.createElement('p'); p.className = 'hint'; p.textContent = 'No notes yet.'; body.append(p); return; }
+  for (const n of list){
+    const c = document.createElement('div'); c.className = 'card' + (n === current ? ' current' : '');
+    c.innerHTML = '<span class="t"></span><span class="s"></span><span class="peek"></span><div class="chips"></div><p class="hint"></p><div class="actions"></div>';
+    const t = c.querySelector('.t'); t.textContent = n.vessel.trim() || 'No vessel name'; if (!n.vessel.trim()) t.classList.add('none');
+    c.querySelector('.s').textContent = `${fmtWhen(n.created)} · ${words(n.text)} words` + (n === current ? ' · open now' : '');
+    c.querySelector('.peek').textContent = n.text.trim() || '(empty)';
+    const ch = c.querySelector('.chips');
+    if (n.em === 'done') ch.append(chip('Emailed ✓', 'ok')); else if (n.em === 'pending') ch.append(chip('Email waiting', 'wait')); else if (n.em === 'opened') ch.append(chip('Opened in Mail'));
+    if (n.od === 'done') ch.append(chip('OneDrive ✓', 'ok')); else if (n.od === 'pending') ch.append(chip('OneDrive waiting', 'wait'));
+    if (n.exported) ch.append(chip('Exported to Files', 'ok'));
+    if (n.sentAt && n.updated > n.sentAt + 2000) ch.append(chip('Changed since sent', 'wait'));
+    if (!n.sentAt) ch.append(chip('Not sent'));
+    c.querySelector('.hint').textContent = n.msg || '';
+    const acts = c.querySelector('.actions');
+    const btn = (label, fn, cls) => { const b = document.createElement('button'); b.className = 'btn ' + (cls || ''); b.textContent = label; b.addEventListener('click', fn); acts.append(b); return b; };
+    if (n !== current) btn('Open', () => { const prev = current; persist(prev, true); openNote(n); dropIfBlank(prev); closeSheets(); });
+    if (n.od === 'pending' || n.em === 'pending') btn('Retry', () => processNote(n).then(() => summarise(n)));
+    btn('Save to Files', () => saveToFiles(n));
+    btn('Copy', () => copyText(n.text.trim()));
+    let armed = false;
+    const del = btn('Delete', () => {
+      if (!armed){ armed = true; del.textContent = 'Tap again to delete'; del.classList.add('armed'); setTimeout(() => { armed = false; del.textContent = 'Delete'; del.classList.remove('armed'); }, 3500); return; }
+      notes.delete(n.id); idb.del(n.id); mirror();
+      if (n === current) openNote([...notes.values()].sort((a, b) => b.updated - a.updated)[0] || newNote());
+      refreshPending(); renderNotes(); toast('Deleted');
+    }, 'danger');
+    body.append(c);
   }
 }
-$('#historyBtn').addEventListener('click', () => { renderHistory(); openSheet('#historySheet'); });
-$('#pendingPill').addEventListener('click', () => { renderHistory(); openSheet('#historySheet'); });
-$('#retryAll').addEventListener('click', () => processOutbox());
-window.addEventListener('online', processOutbox);
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') processOutbox(); });
+$('#notesBtn').addEventListener('click', () => { openSheet('#notesSheet'); renderNotes(); });
+$('#pendingPill').addEventListener('click', () => { openSheet('#notesSheet'); renderNotes(); });
+$('#retryAll').addEventListener('click', processAll);
 
 /* ---------- start ---------- */
-renderJob(); counts(); saveOutbox();
-$('#saved').textContent = ta.value ? 'Saved on this phone' : '';
-handleRedirect().then(processOutbox);
+(async () => {
+  await loadNotes();
+  const id = ls.get('current', null);
+  openNote(notes.get(id) || newNote());
+  persist(current, true);
+  refreshPending();
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch(e){}
+  await handleRedirect();
+  renderMeta();
+  processAll();
+})();
 if ('serviceWorker' in navigator && /github\.io$/.test(location.hostname)){
   try { navigator.serviceWorker.register('sw.js').catch(() => {}); } catch(e){}
 }
